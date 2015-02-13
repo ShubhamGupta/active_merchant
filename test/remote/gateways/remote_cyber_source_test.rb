@@ -286,4 +286,18 @@ class RemoteCyberSourceTest < Test::Unit::TestCase
     assert_equal 'Y', response.params["status"]
     assert_equal true,  response.success?
   end
+
+  def test_network_tokenization_authorize_and_capture
+    assert auth = @gateway.authorize(@amount, @credit_card, @options.merge({
+      :network_tokenization => {
+        :online_payment_cryptogram => "EHuWW9PiBkWvqE5juRwDzAUFBAk=",
+        :eci                       => "05"
+      }
+    }))
+    assert_success auth
+    assert_equal 'Successful transaction', auth.message
+
+    assert capture = @gateway.capture(@amount, auth.authorization)
+    assert_success capture
+  end
 end

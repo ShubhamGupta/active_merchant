@@ -13,6 +13,8 @@ class CyberSourceTest < Test::Unit::TestCase
 
     @amount = 100
     @credit_card = credit_card('4111111111111111', :brand => 'visa')
+    @mastercard = credit_card('5555555555554444', :brand => 'mastercard')
+    @america_express = credit_card('378282246310005', :brand => 'american_express')
     @declined_card = credit_card('801111111111111', :brand => 'visa')
     @check = check()
 
@@ -323,6 +325,114 @@ class CyberSourceTest < Test::Unit::TestCase
     end.respond_with(unsuccessful_authorization_response)
     assert_failure response
     assert_equal "Invalid account number", response.message
+  end
+
+  def test_successful_auth_with_network_tokenization_for_visa
+    @gateway.expects(:ssl_post).with do |host, request_body|
+      assert_match %r'<ccAuthService run=\"true\">\n  <cavv>111111111100cryptogram</cavv>\n  <commerceIndicator>vbv</commerceIndicator>\n  <xid>111111111100cryptogram</xid>\n</ccAuthService>\n<paymentNetworkToken>\n  <transactionType>1</transactionType>\n</paymentNetworkToken>', request_body
+      true
+    end.returns(successful_purchase_response)
+
+    assert response = @gateway.authorize(@amount, @credit_card, @options.merge(
+      {
+        :network_tokenization => {
+          :transaction_id            => "123",
+          :eci                       => "05",
+          :online_payment_cryptogram => "111111111100cryptogram"
+        }
+      }
+    ))
+    assert_success response
+  end
+
+  def test_successful_purchase_with_network_tokenization_for_visa
+    @gateway.expects(:ssl_post).with do |host, request_body|
+      assert_match %r'<ccAuthService run=\"true\">\n  <cavv>111111111100cryptogram</cavv>\n  <commerceIndicator>vbv</commerceIndicator>\n  <xid>111111111100cryptogram</xid>\n</ccAuthService>\n<paymentNetworkToken>\n  <transactionType>1</transactionType>\n</paymentNetworkToken>', request_body
+      true
+    end.returns(successful_purchase_response)
+
+    assert response = @gateway.purchase(@amount, @credit_card, @options.merge(
+      {
+        :network_tokenization => {
+          :transaction_id            => "123",
+          :eci                       => "05",
+          :online_payment_cryptogram => "111111111100cryptogram"
+        }
+      }
+    ))
+    assert_success response
+  end
+
+  def test_successful_auth_with_network_tokenization_for_mastercard
+    @gateway.expects(:ssl_post).with do |host, request_body|
+      assert_match %r'<ucaf>\n  <authenticationData>111111111100cryptogram</authenticationData>\n  <collectionIndicator>2</collectionIndicator>\n</ucaf>\n<ccAuthService run=\"true\">\n  <commerceIndicator>spa</commerceIndicator>\n</ccAuthService>\n<paymentNetworkToken>\n  <transactionType>1</transactionType>\n</paymentNetworkToken>', request_body
+      true
+    end.returns(successful_purchase_response)
+
+    assert response = @gateway.authorize(@amount, @mastercard, @options.merge(
+      {
+        :network_tokenization => {
+          :transaction_id            => "123",
+          :eci                       => "05",
+          :online_payment_cryptogram => "111111111100cryptogram"
+        }
+      }
+    ))
+    assert_success response
+  end
+
+  def test_successful_purchase_with_network_tokenization_for_mastercard
+    @gateway.expects(:ssl_post).with do |host, request_body|
+      assert_match %r'<ucaf>\n  <authenticationData>111111111100cryptogram</authenticationData>\n  <collectionIndicator>2</collectionIndicator>\n</ucaf>\n<ccAuthService run=\"true\">\n  <commerceIndicator>spa</commerceIndicator>\n</ccAuthService>\n<paymentNetworkToken>\n  <transactionType>1</transactionType>\n</paymentNetworkToken>', request_body
+      true
+    end.returns(successful_purchase_response)
+
+    assert response = @gateway.purchase(@amount, @mastercard, @options.merge(
+      {
+        :network_tokenization => {
+          :transaction_id            => "123",
+          :eci                       => "05",
+          :online_payment_cryptogram => "111111111100cryptogram"
+        }
+      }
+    ))
+    assert_success response
+  end
+
+  def test_successful_auth_with_network_tokenization_for_amex
+    @gateway.expects(:ssl_post).with do |host, request_body|
+      assert_match %r'<ccAuthService run=\"true\">\n  <cavv>MTExMTExMTExMTAwY3J5cHRvZ3I=\n</cavv>\n  <commerceIndicator>aesk</commerceIndicator>\n  <xid>YW0=\n</xid>\n</ccAuthService>\n<paymentNetworkToken>\n  <transactionType>1</transactionType>\n</paymentNetworkToken>', request_body
+      true
+    end.returns(successful_purchase_response)
+
+    assert response = @gateway.authorize(@amount, @america_express, @options.merge(
+      {
+        :network_tokenization => {
+          :transaction_id            => "123",
+          :eci                       => "05",
+          :online_payment_cryptogram => Base64.encode64("111111111100cryptogram")
+        }
+      }
+    ))
+    assert_success response
+  end
+
+  def test_successful_purchase_with_network_tokenization_for_amex
+    @gateway.expects(:ssl_post).with do |host, request_body|
+      assert_match %r'<ccAuthService run=\"true\">\n  <cavv>MTExMTExMTExMTAwY3J5cHRvZ3I=\n</cavv>\n  <commerceIndicator>aesk</commerceIndicator>\n  <xid>YW0=\n</xid>\n</ccAuthService>\n<paymentNetworkToken>\n  <transactionType>1</transactionType>\n</paymentNetworkToken>', request_body
+      true
+    end.returns(successful_purchase_response)
+
+    assert response = @gateway.purchase(@amount, @america_express, @options.merge(
+      {
+        :network_tokenization => {
+          :transaction_id            => "123",
+          :eci                       => "05",
+          :online_payment_cryptogram => Base64.encode64("111111111100cryptogram")
+        }
+      }
+    ))
+    assert_success response
   end
 
   private
